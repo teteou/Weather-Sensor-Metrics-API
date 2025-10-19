@@ -154,11 +154,23 @@ public class MetricQueryService {
             Long dataPointsCount) {
 
         MetricType metricType = (MetricType) result[0];
-        BigDecimal value = (BigDecimal) result[1];
+
+        // Handle both Double and BigDecimal from aggregation results
+        BigDecimal value;
+        if (result[1] instanceof BigDecimal) {
+            value = (BigDecimal) result[1];
+        } else if (result[1] instanceof Double) {
+            value = BigDecimal.valueOf((Double) result[1]);
+        } else if (result[1] instanceof Number) {
+            value = BigDecimal.valueOf(((Number) result[1]).doubleValue());
+        } else {
+            throw new IllegalStateException("Unexpected aggregation result type: " +
+                    (result[1] != null ? result[1].getClass() : "null"));
+        }
 
         return AggregatedMetricResponse.builder()
                 .metricType(metricType)
-                .value(value)
+                .value(value.setScale(2, java.math.RoundingMode.HALF_UP)) // Round to 2 decimals
                 .unit(metricType.getUnit())
                 .statistic(request.getStatistic())
                 .startDate(startDate)
