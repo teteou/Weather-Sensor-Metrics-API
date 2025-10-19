@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -40,7 +39,7 @@ public interface MetricDataRepository extends
                     ELSE AVG(m.value)
                END as result
         FROM MetricData m
-        WHERE (:sensorIds IS NULL OR m.sensor.id IN :sensorIds)
+        WHERE (:#{#sensorIds == null} = true OR m.sensor.id IN :sensorIds)
           AND m.metricType IN :metricTypes
           AND m.timestamp BETWEEN :startDate AND :endDate
         GROUP BY m.metricType

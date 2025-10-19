@@ -46,7 +46,7 @@ dependencies {
     // ===== ADDITIONAL DEPENDENCIES =====
 
     // OpenAPI / Swagger UI for API documentation
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
 
     // MapStruct for automatic DTO mapping
     implementation 'org.mapstruct:mapstruct:1.5.5.Final'
