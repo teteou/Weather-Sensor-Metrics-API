@@ -51,16 +51,9 @@ public class MetricQueryRequest {
      */
     @Schema(description = "Type of statistical aggregation")
     public enum StatisticType {
-        @Schema(description = "Minimum value")
         MIN,
-
-        @Schema(description = "Maximum value")
         MAX,
-
-        @Schema(description = "Average (mean) value")
         AVG,
-
-        @Schema(description = "Sum of all values")
         SUM
     }
 }
