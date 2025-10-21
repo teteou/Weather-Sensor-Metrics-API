@@ -37,4 +37,10 @@ public interface SensorRepository extends JpaRepository<Sensor, Long> {
      * @return true if exists, false otherwise
      */
     boolean existsBySensorCode(String sensorCode);
+
+    /**
+     * Count sensors by status (ACTIVE, INACTIVE).
+     * Used for health checks.
+     */
+    long countByStatus(SensorStatus status);
 }

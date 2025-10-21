@@ -6,6 +6,10 @@ import com.weathersensor.api.domain.model.MetricData;
 import com.weathersensor.api.domain.model.MetricType;
 import com.weathersensor.api.domain.repository.MetricDataRepository;
 import com.weathersensor.api.domain.specification.MetricDataSpecification;
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
@@ -28,6 +32,7 @@ import java.util.List;
 public class MetricQueryService {
 
     private final MetricDataRepository metricDataRepository;
+    private final MeterRegistry meterRegistry;
 
     /**
      * Query aggregated metrics with flexible filtering.
@@ -35,51 +40,88 @@ public class MetricQueryService {
      * @param request query criteria including sensors, metrics, date range, and statistic
      * @return list of aggregated results, one per metric type
      */
+    @Timed(value = "metric.query.time",
+            description = "Time taken to execute metric queries",
+            histogram = true)
     public List<AggregatedMetricResponse> queryAggregatedMetrics(MetricQueryRequest request) {
         log.info("Executing aggregated query: sensors={}, metrics={}, statistic={}, range={} to {}",
                 request.getSensorIds(), request.getMetricTypes(),
                 request.getStatistic(), request.getStartDate(), request.getEndDate());
 
-        // Apply default date range if not specified (last 7 days)
-        LocalDateTime startDate = request.getStartDate() != null
-                ? request.getStartDate()
-                : LocalDateTime.now().minusDays(7);
+        // Increment request counter with tags
+        Counter.builder("metric.query.requests")
+                .tag("statistic", request.getStatistic().name())
+                .tag("sensor_count", getSensorCountTag(request.getSensorIds()))
+                .tag("metric_types", String.valueOf(request.getMetricTypes().size()))
+                .description("Total number of metric queries executed")
+                .register(meterRegistry)
+                .increment();
 
-        LocalDateTime endDate = request.getEndDate() != null
-                ? request.getEndDate()
-                : LocalDateTime.now();
+        Timer.Sample sample = Timer.start(meterRegistry);
 
-        // Validate date range (business rule: 1 day to 1 month)
-        validateDateRange(startDate, endDate);
+        try {
+            // Apply default date range if not specified (last 7 days)
+            LocalDateTime startDate = request.getStartDate() != null
+                    ? request.getStartDate()
+                    : LocalDateTime.now().minusDays(7);
 
-        // Execute aggregation query in database
-        List<Object[]> results = metricDataRepository.calculateAggregatedStatistics(
-                request.getSensorIds(),
-                request.getMetricTypes(),
-                startDate,
-                endDate,
-                request.getStatistic().name()
-        );
+            LocalDateTime endDate = request.getEndDate() != null
+                    ? request.getEndDate()
+                    : LocalDateTime.now();
 
-        // Count data points for each metric type
-        Long totalDataPoints = countDataPoints(
-                request.getSensorIds(),
-                request.getMetricTypes(),
-                startDate,
-                endDate);
+            // Validate date range (business rule: 1 day to 1 month)
+            validateDateRange(startDate, endDate);
 
-        log.info("Query returned {} aggregated results from {} data points",
-                results.size(), totalDataPoints);
+            // Execute aggregation query in database
+            List<Object[]> results = metricDataRepository.calculateAggregatedStatistics(
+                    request.getSensorIds(),
+                    request.getMetricTypes(),
+                    startDate,
+                    endDate,
+                    request.getStatistic().name()
+            );
 
-        // Map results to response DTOs
-        return results.stream()
-                .map(result -> mapToAggregatedResponse(
-                        result,
-                        request,
-                        startDate,
-                        endDate,
-                        totalDataPoints))
-                .toList();
+            // Count data points for each metric type
+            Long totalDataPoints = countDataPoints(
+                    request.getSensorIds(),
+                    request.getMetricTypes(),
+                    startDate,
+                    endDate);
+
+            log.info("Query returned {} aggregated results from {} data points",
+                    results.size(), totalDataPoints);
+
+            // Map results to response DTOs
+            List<AggregatedMetricResponse> response = results.stream()
+                    .map(result -> mapToAggregatedResponse(
+                            result,
+                            request,
+                            startDate,
+                            endDate,
+                            totalDataPoints))
+                    .toList();
+
+            // Record successful execution
+            sample.stop(Timer.builder("metric.query.execution")
+                    .tag("status", "success")
+                    .tag("result_count", String.valueOf(response.size()))
+                    .tag("statistic", request.getStatistic().name())
+                    .description("Query execution time with status")
+                    .register(meterRegistry));
+
+            return response;
+
+        } catch (Exception e) {
+            // Record failed execution
+            sample.stop(Timer.builder("metric.query.execution")
+                    .tag("status", "failure")
+                    .tag("error", e.getClass().getSimpleName())
+                    .description("Query execution time with status")
+                    .register(meterRegistry));
+
+            log.error("Error executing metric query", e);
+            throw e;
+        }
     }
 
     /**
@@ -178,5 +220,15 @@ public class MetricQueryService {
                 .sensorIds(request.getSensorIds())
                 .dataPointsCount(dataPointsCount)
                 .build();
+    }
+
+    /**
+     * Classify sensor count for metrics tagging.
+     */
+    private String getSensorCountTag(List<Long> sensorIds) {
+        if (sensorIds == null || sensorIds.isEmpty()) {
+            return "all";
+        }
+        return sensorIds.size() == 1 ? "single" : "multiple";
     }
 }
