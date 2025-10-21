@@ -67,6 +67,9 @@ dependencies {
 
     // Micrometer Prometheus Registry - Metrics export
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+    // Rate Limiting with Bucket4j NEW
+    implementation 'com.bucket4j:bucket4j-core:8.7.0'
 }
 
 tasks.named('test') {
