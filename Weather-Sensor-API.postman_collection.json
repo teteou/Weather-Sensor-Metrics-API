@@ -1,169 +1,306 @@
 {
   "info": {
     "name": "Weather Sensor API",
+    "_postman_id": "3f2f2f5b-7e66-4a6b-9d51-collection-weather-sensor-api",
+    "description": "Postman collection for Weather Sensor API: ingestion (sync/async/batch), query, observability (Actuator), and rate limiting checks.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" }
+  ],
   "item": [
     {
-      "name": "1. Ingest Single Metric",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"sensorId\": 1,\n  \"metricType\": \"TEMPERATURE\",\n  \"value\": 25.5,\n  \"timestamp\": \"2024-10-19T15:30:00\"\n}"
+      "name": "Ingestion",
+      "item": [
+        {
+          "name": "1. Ingest Metric (Synchronous)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sensorId\": 1,\n  \"metricType\": \"TEMPERATURE\",\n  \"value\": 23.5,\n  \"timestamp\": \"2025-01-15T10:30:00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "metrics"]
+            },
+            "description": "Synchronous ingestion. Returns 201 Created with entity body."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
         },
-        "url": {
-          "raw": "http://localhost:8080/api/v1/metrics",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["api", "v1", "metrics"]
+        {
+          "name": "2. Ingest Metric (Asynchronous)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sensorId\": 1,\n  \"metricType\": \"TEMPERATURE\",\n  \"value\": 23.5,\n  \"timestamp\": \"2025-01-15T10:30:00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/metrics/async",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "metrics", "async"]
+            },
+            "description": "Fire-and-forget async ingestion. Returns 202 Accepted."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 202 Accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Batch Ingest",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\"sensorId\": 1, \"metricType\": \"TEMPERATURE\", \"value\": 23.5, \"timestamp\": \"2025-01-15T10:30:00\"},\n  {\"sensorId\": 1, \"metricType\": \"HUMIDITY\", \"value\": 65.0, \"timestamp\": \"2025-01-15T10:31:00\"}\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/metrics/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "metrics", "batch"]
+            },
+            "description": "Batch ingestion. Returns 201 Created with array of created resources."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
         }
-      }
+      ]
     },
     {
-      "name": "2. Query Average Temperature (Last 7 days)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"sensorIds\": [1],\n  \"metricTypes\": [\"TEMPERATURE\"],\n  \"statistic\": \"AVG\"\n}"
+      "name": "Query",
+      "item": [
+        {
+          "name": "4. Query Aggregated Metrics (AVG)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sensorIds\": [1,2],\n  \"metricTypes\": [\"TEMPERATURE\", \"HUMIDITY\"],\n  \"statistic\": \"AVG\",\n  \"startDate\": \"2025-01-08T00:00:00\",\n  \"endDate\": \"2025-01-15T23:59:59\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/metrics/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "metrics", "query"]
+            },
+            "description": "Aggregations over a date range using AVG."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
         },
-        "url": {
-          "raw": "http://localhost:8080/api/v1/metrics/query",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["api", "v1", "metrics", "query"]
+        {
+          "name": "5. Query Aggregated Metrics (MAX)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sensorIds\": [1],\n  \"metricTypes\": [\"TEMPERATURE\"],\n  \"statistic\": \"MAX\",\n  \"startDate\": \"2025-01-08T00:00:00\",\n  \"endDate\": \"2025-01-15T23:59:59\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/metrics/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "metrics", "query"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": ["pm.test('Status is 200 OK', () => pm.response.to.have.status(200));"] }
+            }
+          ]
         }
-      }
+      ]
     },
     {
-      "name": "3. Query Multiple Metrics (Temp + Humidity)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"sensorIds\": [1, 2, 3],\n  \"metricTypes\": [\"TEMPERATURE\", \"HUMIDITY\"],\n  \"statistic\": \"MAX\",\n  \"startDate\": \"2024-10-01T00:00:00\",\n  \"endDate\": \"2024-10-19T23:59:59\"\n}"
+      "name": "Actuator",
+      "item": [
+        {
+          "name": "6. Health",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"] },
+            "description": "Health endpoint with custom indicators."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Status UP', () => pm.expect(body.status).to.eql('UP'));"
+                ]
+              }
+            }
+          ]
         },
-        "url": {
-          "raw": "http://localhost:8080/api/v1/metrics/query",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["api", "v1", "metrics", "query"]
+        {
+          "name": "7. Metrics",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/actuator/metrics", "host": ["{{baseUrl}}"], "path": ["actuator", "metrics"] },
+            "description": "List of available metrics names."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Contains names array', () => pm.expect(body.names).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. Prometheus",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/actuator/prometheus", "host": ["{{baseUrl}}"], "path": ["actuator", "prometheus"] },
+            "description": "Prometheus exposition format."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body contains metrics text', () => pm.expect(pm.response.text()).to.include('http_server_requests_seconds'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. Info",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/actuator/info", "host": ["{{baseUrl}}"], "path": ["actuator", "info"] },
+            "description": "Application info."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Info is object', () => pm.expect(pm.response.json()).to.be.an('object'));"
+                ]
+              }
+            }
+          ]
         }
-      }
+      ]
     },
     {
-      "name": "4. Query All Sensors (Wind Speed Average)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"metricTypes\": [\"WIND_SPEED\"],\n  \"statistic\": \"AVG\"\n}"
+      "name": "Rate Limiting (Bucket4j)",
+      "item": [
+        {
+          "name": "10. Within Limit (Headers)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sensorId\": 1,\n  \"metricType\": \"TEMPERATURE\",\n  \"value\": 21.0,\n  \"timestamp\": \"2025-01-15T10:31:00\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/metrics", "host": ["{{baseUrl}}"], "path": ["api", "v1", "metrics"] },
+            "description": "Single request. Expect X-RateLimit-* headers present."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Has X-RateLimit headers', () => {",
+                  "  pm.expect(pm.response.headers.has('X-RateLimit-Limit')).to.be.true;",
+                  "  pm.expect(pm.response.headers.has('X-RateLimit-Remaining')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
-        "url": {
-          "raw": "http://localhost:8080/api/v1/metrics/query",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["api", "v1", "metrics", "query"]
+        {
+          "name": "11. Exceeded (Expect 429)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sensorId\": 1,\n  \"metricType\": \"TEMPERATURE\",\n  \"value\": 21.5,\n  \"timestamp\": \"2025-01-15T10:31:30\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/metrics", "host": ["{{baseUrl}}"], "path": ["api", "v1", "metrics"] },
+            "description": "Run repeatedly (Collection Runner ~25 times quickly) to trigger 429."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 201 or 429', () => pm.expect([201,429]).to.include(code));",
+                  "if (code === 429) {",
+                  "  pm.test('Retry-After header present', () => pm.expect(pm.response.headers.has('X-RateLimit-Retry-After-Seconds')).to.be.true);",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
-      }
-    },
-    {
-      "name": "5. Validation Error - Date Range Too Long",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"metricTypes\": [\"TEMPERATURE\"],\n  \"statistic\": \"AVG\",\n  \"startDate\": \"2024-08-01T00:00:00\",\n  \"endDate\": \"2024-10-19T23:59:59\"\n}"
-        },
-        "url": {
-          "raw": "http://localhost:8080/api/v1/metrics/query",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["api", "v1", "metrics", "query"]
-        }
-      }
-    },
-    {
-      "name": "6. Validation Error - Sensor Not Found",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"sensorId\": 999,\n  \"metricType\": \"TEMPERATURE\",\n  \"value\": 25.0,\n  \"timestamp\": \"2024-10-19T16:00:00\"\n}"
-        },
-        "url": {
-          "raw": "http://localhost:8080/api/v1/metrics",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["api", "v1", "metrics"]
-        }
-      }
-    },
-    {
-      "name": "7. Batch Ingest Multiple Metrics",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "[\n  {\n    \"sensorId\": 1,\n    \"metricType\": \"TEMPERATURE\",\n    \"value\": 22.5,\n    \"timestamp\": \"2024-10-19T17:00:00\"\n  },\n  {\n    \"sensorId\": 1,\n    \"metricType\": \"HUMIDITY\",\n    \"value\": 68.0,\n    \"timestamp\": \"2024-10-19T17:00:00\"\n  }\n]"
-        },
-        "url": {
-          "raw": "http://localhost:8080/api/v1/metrics/batch",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["api", "v1", "metrics", "batch"]
-        }
-      }
+      ]
     }
   ]
 }
