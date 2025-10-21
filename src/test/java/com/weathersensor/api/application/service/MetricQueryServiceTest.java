@@ -2,6 +2,7 @@ package com.weathersensor.api.application.service;
 
 import com.weathersensor.api.application.dto.request.MetricQueryRequest;
 import com.weathersensor.api.application.dto.response.AggregatedMetricResponse;
+import com.weathersensor.api.domain.model.MetricData;
 import com.weathersensor.api.domain.model.MetricType;
 import com.weathersensor.api.domain.repository.MetricDataRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.jpa.domain.Specification;
@@ -43,8 +45,8 @@ class MetricQueryServiceTest {
         SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
         metricQueryService = new MetricQueryService(metricDataRepository, meterRegistry);
 
-        // Mock count for dataPointsCount
-        when(metricDataRepository.count(any(Specification.class))).thenReturn(0L);
+        when(metricDataRepository.count(ArgumentMatchers.<Specification<MetricData>>any()))
+                .thenReturn(0L);
     }
 
     @Test
