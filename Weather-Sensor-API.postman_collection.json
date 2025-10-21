@@ -1,0 +1,169 @@
+{
+  "info": {
+    "name": "Weather Sensor API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Ingest Single Metric",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sensorId\": 1,\n  \"metricType\": \"TEMPERATURE\",\n  \"value\": 25.5,\n  \"timestamp\": \"2024-10-19T15:30:00\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/metrics",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "v1", "metrics"]
+        }
+      }
+    },
+    {
+      "name": "2. Query Average Temperature (Last 7 days)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sensorIds\": [1],\n  \"metricTypes\": [\"TEMPERATURE\"],\n  \"statistic\": \"AVG\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/metrics/query",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "v1", "metrics", "query"]
+        }
+      }
+    },
+    {
+      "name": "3. Query Multiple Metrics (Temp + Humidity)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sensorIds\": [1, 2, 3],\n  \"metricTypes\": [\"TEMPERATURE\", \"HUMIDITY\"],\n  \"statistic\": \"MAX\",\n  \"startDate\": \"2024-10-01T00:00:00\",\n  \"endDate\": \"2024-10-19T23:59:59\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/metrics/query",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "v1", "metrics", "query"]
+        }
+      }
+    },
+    {
+      "name": "4. Query All Sensors (Wind Speed Average)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"metricTypes\": [\"WIND_SPEED\"],\n  \"statistic\": \"AVG\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/metrics/query",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "v1", "metrics", "query"]
+        }
+      }
+    },
+    {
+      "name": "5. Validation Error - Date Range Too Long",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"metricTypes\": [\"TEMPERATURE\"],\n  \"statistic\": \"AVG\",\n  \"startDate\": \"2024-08-01T00:00:00\",\n  \"endDate\": \"2024-10-19T23:59:59\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/metrics/query",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "v1", "metrics", "query"]
+        }
+      }
+    },
+    {
+      "name": "6. Validation Error - Sensor Not Found",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sensorId\": 999,\n  \"metricType\": \"TEMPERATURE\",\n  \"value\": 25.0,\n  \"timestamp\": \"2024-10-19T16:00:00\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/metrics",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "v1", "metrics"]
+        }
+      }
+    },
+    {
+      "name": "7. Batch Ingest Multiple Metrics",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"sensorId\": 1,\n    \"metricType\": \"TEMPERATURE\",\n    \"value\": 22.5,\n    \"timestamp\": \"2024-10-19T17:00:00\"\n  },\n  {\n    \"sensorId\": 1,\n    \"metricType\": \"HUMIDITY\",\n    \"value\": 68.0,\n    \"timestamp\": \"2024-10-19T17:00:00\"\n  }\n]"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/metrics/batch",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "v1", "metrics", "batch"]
+        }
+      }
+    }
+  ]
+}
