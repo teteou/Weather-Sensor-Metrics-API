@@ -4,13 +4,14 @@ import com.weathersensor.api.application.dto.request.MetricQueryRequest;
 import com.weathersensor.api.application.dto.response.AggregatedMetricResponse;
 import com.weathersensor.api.domain.model.MetricType;
 import com.weathersensor.api.domain.repository.MetricDataRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,7 +29,6 @@ class MetricQueryServiceTest {
     @Mock
     private MetricDataRepository metricDataRepository;
 
-    @InjectMocks
     private MetricQueryService metricQueryService;
 
     private LocalDateTime startDate;
@@ -38,6 +38,13 @@ class MetricQueryServiceTest {
     void setUp() {
         startDate = LocalDateTime.of(2024, 1, 1, 0, 0);
         endDate = LocalDateTime.of(2024, 1, 7, 23, 59);
+
+        // Use SimpleMeterRegistry instead of mocking (simpler and more reliable)
+        SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+        metricQueryService = new MetricQueryService(metricDataRepository, meterRegistry);
+
+        // Mock count for dataPointsCount
+        when(metricDataRepository.count(any(Specification.class))).thenReturn(0L);
     }
 
     @Test
