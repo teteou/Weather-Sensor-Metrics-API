@@ -70,6 +70,40 @@ The project was organized using **Epic → Story → Task** hierarchy following 
 | Epic 8: Rate Limiting     | 1       | 6     | 5            | ✅ Done |
 | TOTAL                     | 19      | 47    | 62           | 100%    |
 
+### Jira Board Views
+
+**Backlog View**:
+![Jira Backlog](docs/screenshots/jira-backlog.png)
+*Organized by Epics with all Stories and Tasks visible*
+
+**Board View** (Kanban):
+![Jira Board](docs/screenshots/jira-board.png)
+*All tasks moved to "Done" column after completion*
+
+**Epic Details**:
+![Epic View](docs/screenshots/jira-epic-detail.png)
+*Example: Infrastructure Setup Epic with linked Stories*
+
+### Task Tracking Example
+
+**Epic 2: Domain Layer Implementation**
+
+```
+📘 Story: Core Entities (3 Story Points)
+├─ ☑️ Task: Create Sensor entity
+│  ├─ Description: JPA entity with @ManyToOne relationship
+│  ├─ Commit: 423ff54
+│  └─ Status: Done
+├─ ☑️ Task: Create MetricData entity  
+│  ├─ Description: Time-series entity with composite index
+│  ├─ Commit: 423ff54
+│  └─ Status: Done
+└─ ☑️ Task: Create MetricType enum
+   ├─ Description: Enum with unit and displayName
+   ├─ Commit: 423ff54
+   └─ Status: Done
+```
+
 ### Development Phases
 
 | Phase          | Duration     | Epics Completed | Key Deliverables                 |
