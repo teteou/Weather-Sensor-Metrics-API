@@ -70,7 +70,7 @@ info:
   app:
     name: Weather Sensor Metrics API
     description: Time-series data ingestion and analytics for IoT sensors
-    version: 2.0.0-SNAPSHOT
+    version: 1.1.0
     encoding: UTF-8
     java:
       version: 17
