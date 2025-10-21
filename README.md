@@ -5,8 +5,8 @@
 ![Java](https://img.shields.io/badge/Java-17-orange.svg)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.1-brightgreen.svg)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-29%20passing-success.svg)
-![Version](https://img.shields.io/badge/Version-1.1.0-blue.svg)
+![Tests](https://img.shields.io/badge/Tests-32%20passing-success.svg)
+![Version](https://img.shields.io/badge/Version-1.2.0-blue.svg)
 ![Coverage](https://img.shields.io/badge/Coverage-76%25-green.svg)
 
 ---
@@ -49,35 +49,39 @@ The project was organized using **Epic → Story → Task** hierarchy following 
 │  ├─ 📘 Story: Unit Tests (MetricQueryService, MetricIngestionService)
 │  └─ 📘 Story: Integration Tests (TestContainers)
 │
-└─ 🔷 EPIC 7: Quick Wins - Production Readiness (3 Stories, 14 Tasks)  v1.1.0
-   ├─ 📘 Story: Observability & Monitoring
-   └─ 📘 Story: Async Processing
+├─ 🔷 EPIC 7: Quick Wins - Production Readiness (3 Stories, 14 Tasks)  v1.1.0
+│  ├─ 📘 Story: Observability & Monitoring
+│  └─ 📘 Story: Async Processing
+└─ 🔷 EPIC 8: API Protection & Rate Limiting (1 Story, 6 Tasks) ✨ v1.2.0
+   └─ 📘 Story: Rate Limiting with Bucket4j
 ```
 
 ### Story Points Distribution
 
-| Epic                      | Stories | Tasks  | Story Points | Status      |
-| ------------------------- | ------- | ------ | ------------ | ----------- |
-| Epic 1: Infrastructure    | 3       | 6      | 9            | ✅ Done     |
-| Epic 2: Domain Layer      | 3       | 6      | 8            | ✅ Done     |
-| Epic 3: Application Layer | 3       | 5      | 10           | ✅ Done     |
-| Epic 4: Web Layer         | 2       | 4      | 5            | ✅ Done     |
-| Epic 5: Validation        | 2       | 3      | 4            | ✅ Done     |
-| Epic 6: Testing           | 2       | 5      | 8            | ✅ Done     |
-| **Epic 7: Quick Wins**    | **3**   | **14** | **13**       | **✅ Done** |
-| **TOTAL**                 | **18**  | **41** | **57**       | **100%**    |
+| Epic                      | Stories | Tasks | Story Points | Status  |
+| ------------------------- | ------- | ----- | ------------ | ------- |
+| Epic 1: Infrastructure    | 3       | 6     | 9            | ✅ Done |
+| Epic 2: Domain Layer      | 3       | 6     | 8            | ✅ Done |
+| Epic 3: Application Layer | 3       | 5     | 10           | ✅ Done |
+| Epic 4: Web Layer         | 2       | 4     | 5            | ✅ Done |
+| Epic 5: Validation        | 2       | 3     | 4            | ✅ Done |
+| Epic 6: Testing           | 2       | 5     | 8            | ✅ Done |
+| Epic 7: Quick Wins        | 3       | 14    | 13           | ✅ Done |
+| Epic 8: Rate Limiting     | 1       | 6     | 5            | ✅ Done |
+| TOTAL                     | 19      | 47    | 62           | 100%    |
 
 ### Development Phases
 
-| Phase          | Duration   | Epics Completed | Key Deliverables                 |
-| -------------- | ---------- | --------------- | -------------------------------- |
-| **Setup**      | Day 1 (4h) | Epic 1          | Database + Flyway + Dependencies |
-| **Core**       | Day 1 (6h) | Epic 2-3        | Domain + Services + DTOs         |
-| **API**        | Day 2 (3h) | Epic 4          | Controllers + Swagger            |
-| **Quality**    | Day 2 (4h) | Epic 5-6        | Validators + Tests               |
-| **Production** | Day 3 (2h) | Epic 7          | Observability + Async + Docs     |
+| Phase          | Duration     | Epics Completed | Key Deliverables                 |
+| -------------- | ------------ | --------------- | -------------------------------- |
+| **Setup**      | Day 1 (4h)   | Epic 1          | Database + Flyway + Dependencies |
+| **Core**       | Day 1 (6h)   | Epic 2-3        | Domain + Services + DTOs         |
+| **API**        | Day 2 (3h)   | Epic 4          | Controllers + Swagger            |
+| **Quality**    | Day 2 (4h)   | Epic 5-6        | Validators + Tests               |
+| **Production** | Day 3 (2h)   | Epic 7          | Observability + Async + Docs     |
+| **Protection** | Day 3 (1.5h) | Epic 8          | Rate Limiting + Tests            |
 
-**Total Development Time**: ~19 hours across 3 days
+**Total Development Time**: ~20.5 hours across 3 days
 **Project Status**: 100% Complete ✅
 
 ---
@@ -283,6 +287,65 @@ POST /api/v1/metrics/async
 ```
 
 ---
+
+---
+
+### 🛡️ Rate Limiting
+
+API protection against abuse using token bucket algorithm.
+
+**Configuration**:
+
+- Sustained rate: 100 requests/minute per IP
+- Burst capacity: 20 requests/second
+- In-memory storage (ConcurrentHashMap)
+- Protection on `/api/v1/metrics/**` endpoints
+
+**Rate Limit Headers**:
+
+```bash
+X-RateLimit-Limit: 100             # Max requests per minute
+X-RateLimit-Remaining: 95          # Tokens remaining
+X-RateLimit-Retry-After-Seconds: 60  # Wait time (on 429)
+```
+
+**Example - Rate Limit Exceeded**:
+
+```bash
+POST /api/v1/metrics
+# After 20 requests in 1 second...
+
+HTTP/1.1 429 Too Many Requests
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 0
+X-RateLimit-Retry-After-Seconds: 60
+
+{
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded. Try again in 60 seconds.",
+  "status": 429
+}
+```
+
+**Protected Endpoints**:
+
+- `POST /api/v1/metrics` (sync ingestion)
+- `POST /api/v1/metrics/async` (async ingestion)
+- `POST /api/v1/metrics/batch` (batch ingestion)
+
+**Excluded from Rate Limiting**:
+
+- `/actuator/**` (monitoring)
+- `/swagger-ui/**` (documentation)
+
+**Configuration** (`application.yml`):
+
+```yaml
+rate-limit:
+  enabled: true
+  requests-per-minute: 100
+  burst-capacity: 20
+```
 
 ## Database Schema
 
@@ -604,24 +667,31 @@ src/main/resources/
 ```
 Test Pyramid:
         /\
-       /E2E\      8 tests (28%) - TestContainers + real PostgreSQL
+       /E2E\      8 tests (25%) - TestContainers + real PostgreSQL
       /------\
      /        \
-    /   Unit   \  21 tests (72%) - Mockito + isolated components
+    /   Unit   \  24 tests (75%) - Mockito + isolated components
    /------------\
 
-Total: 29 tests passing ✅
+Total: 32 tests passing ✅
 Coverage: 76%
 ```
 
 ### Test Suites
 
-| Test Suite                     | Tests       | Description                                     |
-| ------------------------------ | ----------- | ----------------------------------------------- |
-| **MetricQueryServiceTest**     | 6 tests     | Aggregation logic, date defaults, empty results |
-| **MetricIngestionServiceTest** | **7 tests** | **Sync/async ingestion, events, batch, errors** |
-| **Integration Tests**          | 8 tests     | End-to-end with real PostgreSQL                 |
-| **Validator Tests**            | 8 tests     | Custom validators, boundary conditions          |
+| Test Suite                      | Tests       | Description                                     |
+| ------------------------------- | ----------- | ----------------------------------------------- |
+| **MetricQueryServiceTest**      | 6 tests     | Aggregation logic, date defaults, empty results |
+| **MetricIngestionServiceTest**  | 7 tests     | Sync/async ingestion, events, batch, errors     |
+| **RateLimitInterceptorTest** ✨ | **3 tests** | **Rate limiting logic, headers, 429 responses** |
+| **Integration Tests**           | 8 tests     | End-to-end with real PostgreSQL                 |
+| **Validator Tests**             | 8 tests     | Custom validators, boundary conditions          |
+
+**New Tests in v1.2.0** ✨:
+
+- `shouldAllowRequestWhenWithinLimit()` - Verify rate limit allows requests
+- `shouldBlockRequestWhenLimitExceeded()` - Verify 429 response
+- `shouldAllowWhenDisabled()` - Verify bypass when disabled
 
 ### Test Report
 
@@ -650,7 +720,7 @@ open build/reports/tests/test/index.html
 **Test Report Screenshots**:
 
 ![Test Report Overview](docs/screenshots/test-report-overview.png)
-_Overview: 29 tests passing with 0 failures_
+_Overview: 32 tests passing with 0 failures_
 
 ![Test Classes Breakdown](docs/screenshots/test-report-classes.png)
 _Test classes: MetricQueryServiceTest (6), MetricIngestionServiceTest (7), Integration (8), Validators (8)_
@@ -825,7 +895,7 @@ This version prioritizes **core functionality + production monitoring** for the 
 
 ## 🚀 Future Enhancements
 
-### ✅ Implemented in v1.1.0 (Quick Wins)
+### ✅ Implemented in v1.1.0 (Quick Wins - Observability)
 
 - ✅ **Observability**: Micrometer + Actuator + Prometheus
 - ✅ **Async ingestion**: CompletableFuture + Thread Pool
@@ -833,15 +903,20 @@ This version prioritizes **core functionality + production monitoring** for the 
 - ✅ **Production metrics**: Query/ingestion counters and timers
 - ✅ **Custom health checks**: Database + Sensor connectivity
 
+### ✅ Implemented in v1.2.0 (API Protection)
+
+- ✅ **Rate Limiting**: Bucket4j token bucket (100 req/min per IP)
+- ✅ **Rate limit headers**: X-RateLimit-Limit, X-RateLimit-Remaining
+- ✅ **429 Too Many Requests**: Proper HTTP status with retry-after
+- ✅ **Configurable limits**: Via application.yml properties
+- ✅ **In-memory storage**: ConcurrentHashMap for simplicity
+
 ---
 
-### 🟢 Short-Term (Production-ready)
+### 🟢 Short-Term (Next Sprint - Not Implemented)
 
-- ✅ **API Key authentication (IoT-friendly)** with profile toggle (`X-API-Key`)
-- ✅ **Rate limiting** (Bucket4j), ideally **per API key**
-- ✅ **Redis caching** for hot queries (target: 50–70% DB offload)
-- ✅ **Cursor-based pagination** for large datasets
-- ⚙️ **Grafana dashboards** for metrics visualization
+- ⏳ **Distributed rate limiting** with Redis (for horizontal scaling)
+- ⏳ **Per-API-key rate limiting** (instead of per-IP)
 
 **Acceptance criteria**: Secure endpoints, stable P99 latency, comprehensive dashboards.
 
@@ -921,6 +996,8 @@ curl http://localhost:8080/actuator/health | jq
 11. ✅ **Custom health indicators**: Proactive system monitoring
 12. ✅ **Justified trade-offs**: Every decision documented with rationale
 13. ✅ **Comprehensive testing**: 29 tests with async and concurrent scenarios
+14. ✅ **Rate limiting**: Token bucket algorithm for API protection ✨
+15. ✅ **Graceful degradation**: 429 responses with retry guidance ✨
 
 ---
 
